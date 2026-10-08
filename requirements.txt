@@ -1,0 +1,23 @@
+# ─── ATTEND-X: Required Python Packages ──────────────────────────────────────
+# Core (always required)
+opencv-python>=4.8.0,<5.0.0
+Pillow>=10.0.0
+qrcode[pil]>=7.4.2
+
+# Barcode / QR scanning (optional but recommended)
+# Windows: also install Visual C++ Redistributable
+# https://github.com/NaturalHistoryMuseum/pyzbar#installation
+pyzbar>=0.1.9
+
+# Pandas – CSV report generation
+pandas>=2.0.0
+
+# Face recognition (optional – enables automatic face identification)
+# On Windows, install precompiled wheels with:
+#   pip install dlib-bin
+#   pip install face_recognition_models "setuptools<72"
+#   pip install face_recognition --no-deps
+# See README.md for full details.
+face_recognition>=1.3.0
+dlib-bin>=20.0.0
+face-recognition-models>=0.3.0

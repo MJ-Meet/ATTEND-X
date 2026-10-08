@@ -1,0 +1,41 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+venv/
+env/
+.venv/
+ENV/
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# SQLite Database & local runtime data (do not commit student records)
+data/*
+!data/.gitkeep
+*.db
+*.sqlite3
+*.sqlite
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Real face photos (privacy protection)
+faces/*
+!faces/.gitkeep
+
+# Generated ID cards
+generated_cards/*
+!generated_cards/.gitkeep
+
+# Session exports and receipts
+exports/*
+!exports/.gitkeep
