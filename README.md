@@ -20,7 +20,7 @@ ATTEND-X is a desktop attendance application that automatically identifies stude
               12 / 50 PRESENT
   ────────────────────────────────────────
   09:01   Rahul Patel       FACE
-  09:03   Meet Jethawa      ID CARD
+  09:03   Apurv Shah        ID CARD
   09:04   Jay Shah          FACE
   ────────────────────────────────────────
 ```
