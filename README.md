@@ -167,28 +167,6 @@ ATTEND-X/
 └── README.md                   # Technical documentation
 ```
 
----
-
-## 👥 Engineering Contribution Breakdown
-
-This project was built following a structured **60% / 35% / 5%** architectural division:
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│  MEMBER 1 (60%): Lead Architect & Core Systems / AI Lead               │
-│  MEMBER 2 (35%): Optical Scanner, Analytics & Feature Subsystems       │
-│  MEMBER 3 ( 5%): Technical Documentation & Setup / Verification        │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-| Contributor | Share | Primary Responsibilities | Assigned Files |
-|---|:---:|---|---|
-| **Member 1** | **60%** *(Lead Architect & Core/AI)* | **Hardest Engineering Core:** Multi-threaded video pipeline, thread-safe Tkinter terminal UI, SQLite database engine, biometric face recognition matching, dynamic ID card generator, and attendance state rules. | `gui.py`, `database.py`, `camera.py`, `attendance.py`, `face_recognition_module.py`, `id_card.py`, `main.py` |
-| **Member 2** | **35%** *(Scanner & Features)* | **Computer Vision & Feature Subsystems:** PyZbar optical decoding engine, contrast filter pipelines, course & student CRUD, digital receipt generation, CSV report exports, and test suites. | `barcode_scanner.py`, `subjects.py`, `students.py`, `reports.py`, `receipt.py`, `test_face_validation.py`, `test_subject_system.py`, `test_id_card_fix.py` |
-| **Member 3** | **5%** *(QA & Setup)* | **Documentation & Setup Support:** Technical documentation, dependency management, Windows ZBar DLL integration, and hardware verification testing. | `README.md`, `requirements.txt`, `verify_id_scanner_fix.py` |
-
----
-
 ## ⚡ Quick Installation & Setup
 
 ### 1. Clone the Repository
