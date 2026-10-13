@@ -83,33 +83,43 @@ FONTS = {
 }
 
 STATUS_COLORS = {
-    "INITIALIZING": C["muted"],
-    "READY":        C["accent"],
-    "FACE DETECTED":C["accent"],
-    "CARD DETECTED":C["accent2"],
-    "IDENTIFYING":  C["warn"],
-    "RECORDED":     C["accent"],
-    "DUPLICATE":    C["warn"],
-    "NOT ENROLLED": C["danger"],
-    "NO SESSION":   C["warn"],
-    "UNKNOWN":      C["danger"],
-    "CAMERA ERROR": C["danger"],
-    "DEMO MODE":    C["accent2"],
+    "INITIALIZING":        C["muted"],
+    "READY":               C["accent"],
+    "CARD DETECTED":       C["accent2"],
+    "READING CARD":        C["warn"],
+    "UNABLE TO READ CARD": C["warn"],
+    "STUDENT NOT FOUND":   C["danger"],
+    "NOT ENROLLED":        C["danger"],
+    "ATTENDANCE RECORDED": C["accent"],
+    "ALREADY MARKED":      C["warn"],
+    "FACE DETECTED":       C["accent"],
+    "IDENTIFYING":         C["warn"],
+    "RECORDED":            C["accent"],
+    "DUPLICATE":           C["warn"],
+    "NO SESSION":          C["warn"],
+    "UNKNOWN":             C["danger"],
+    "CAMERA ERROR":        C["danger"],
+    "DEMO MODE":           C["accent2"],
 }
 
 STATUS_DOT = {
-    "INITIALIZING": C["muted"],
-    "READY":        C["accent"],
-    "FACE DETECTED":C["accent"],
-    "CARD DETECTED":C["accent2"],
-    "IDENTIFYING":  C["warn"],
-    "RECORDED":     C["accent"],
-    "DUPLICATE":    C["warn"],
-    "NOT ENROLLED": C["danger"],
-    "NO SESSION":   C["warn"],
-    "UNKNOWN":      C["danger"],
-    "CAMERA ERROR": C["danger"],
-    "DEMO MODE":    C["accent2"],
+    "INITIALIZING":        C["muted"],
+    "READY":               C["accent"],
+    "CARD DETECTED":       C["accent2"],
+    "READING CARD":        C["warn"],
+    "UNABLE TO READ CARD": C["warn"],
+    "STUDENT NOT FOUND":   C["danger"],
+    "NOT ENROLLED":        C["danger"],
+    "ATTENDANCE RECORDED": C["accent"],
+    "ALREADY MARKED":      C["warn"],
+    "FACE DETECTED":       C["accent"],
+    "IDENTIFYING":         C["warn"],
+    "RECORDED":            C["accent"],
+    "DUPLICATE":           C["warn"],
+    "NO SESSION":          C["warn"],
+    "UNKNOWN":             C["danger"],
+    "CAMERA ERROR":        C["danger"],
+    "DEMO MODE":           C["accent2"],
 }
 
 
@@ -1621,23 +1631,37 @@ class AttendXApp(tk.Tk):
         self.after(self.POLL_INTERVAL_MS, self._poll_camera_events)
 
     def _handle_detection(self, evt: DetectionEvent):
-        if self._current_status in ("IDENTIFYING", "CARD DETECTED", "RECORDED", "DUPLICATE", "UNKNOWN", "NOT ENROLLED", "NO SESSION"):
+        if self._current_status in ("IDENTIFYING", "RECORDED", "ATTENDANCE RECORDED", "DUPLICATE", "ALREADY MARKED", "UNKNOWN", "STUDENT NOT FOUND", "NOT ENROLLED", "NO SESSION", "UNABLE TO READ CARD"):
             return  # Still in confirmation display or processing – ignore
 
-        if evt.kind == DetectionEvent.BARCODE:
+        if evt.kind == DetectionEvent.CARD_DETECTED:
+            if self._current_status not in ("CARD DETECTED", "READING CARD"):
+                self._set_status("CARD DETECTED")
+                self._show_card_detected()
+
+        elif evt.kind == DetectionEvent.READING_CARD:
+            if self._current_status != "READING CARD":
+                self._set_status("READING CARD")
+                self._show_reading_card_in_progress()
+
+        elif evt.kind == DetectionEvent.BARCODE:
             barcode_val = evt.data
             clean_id = barcode_scanner.extract_student_id(barcode_val)
-            self._set_status("CARD DETECTED")
+            self._set_status("READING CARD")
             self._show_reading_card(clean_id)
             self.after(200, lambda: self._show_identifying_student(clean_id))
             self.after(450, lambda: self._process_barcode(clean_id))
 
         elif evt.kind == DetectionEvent.CARD_UNREADABLE:
-            self._set_status("CARD DETECTED")
+            self._set_status("UNABLE TO READ CARD")
             self._show_unreadable_card()
             if self._confirm_after_id:
                 self.after_cancel(self._confirm_after_id)
             self._confirm_after_id = self.after(2500, self._return_to_ready)
+
+        elif evt.kind == DetectionEvent.NONE:
+            if self._current_status in ("CARD DETECTED", "READING CARD"):
+                self._return_to_ready()
 
         elif evt.kind == DetectionEvent.FACE:
             match = evt.data
@@ -1674,13 +1698,13 @@ class AttendXApp(tk.Tk):
         att_id = result.get("attendance_id")
 
         if status == "ok":
-            self._set_status("RECORDED")
+            self._set_status("ATTENDANCE RECORDED")
             is_demo = getattr(self, "_demo_mode", False)
             self._update_conf_card_success(student, t, method, subject=subject, att_id=att_id, is_demo=is_demo)
             self._refresh_timeline()
             self._refresh_counter()
         elif status == "duplicate":
-            self._set_status("DUPLICATE")
+            self._set_status("ALREADY MARKED")
             self._update_conf_card_duplicate(student, t, method, subject=subject, att_id=att_id)
         elif status == "not_enrolled":
             self._set_status("NOT ENROLLED")
@@ -1689,10 +1713,10 @@ class AttendXApp(tk.Tk):
             self._set_status("NO SESSION")
             self._update_conf_card_no_session(student=student)
         elif status == "unknown_card":
-            self._set_status("UNKNOWN")
+            self._set_status("STUDENT NOT FOUND")
             self._update_conf_card_unknown_card(result.get("student_id", ""))
         elif status == "unknown":
-            self._set_status("UNKNOWN")
+            self._set_status("STUDENT NOT FOUND")
             self._update_conf_card_unknown_face()
         else:
             self._set_status("CAMERA ERROR")
@@ -1763,7 +1787,7 @@ class AttendXApp(tk.Tk):
             arm = min(24, box_w // 4)
 
             # Emerald accent in BGR: (150, 210, 0)
-            ret_color = (150, 210, 0) if self._current_status in ("READY", "FACE DETECTED", "CARD DETECTED", "RECORDED") else (184, 163, 148)
+            ret_color = (150, 210, 0) if self._current_status in ("READY", "FACE DETECTED", "CARD DETECTED", "READING CARD", "RECORDED", "ATTENDANCE RECORDED") else (184, 163, 148)
             thick = 2
 
             # Reticle 4 corners
@@ -1832,22 +1856,59 @@ class AttendXApp(tk.Tk):
         self._conf_note.configure(text="Verifying subject enrollment in database...", fg=C["dimmed"])
         self._conf_card.configure(highlightbackground=C["accent"])
 
-    def _show_reading_card(self, barcode_val: str):
+    def _show_card_detected(self):
         if hasattr(self, "_conf_idle_frame") and hasattr(self, "_conf_active_frame"):
             self._conf_idle_frame.pack_forget()
             self._conf_active_frame.pack(fill="both", expand=True)
 
         self._conf_status_badge.configure(text="● CARD DETECTED", fg=C["accent2"])
+        self._conf_name.configure(text="CARD DETECTED", fg=C["text_sec"])
+        self._conf_id.configure(text="HOLD CARD STEADY", fg=C["accent2"])
+        self._conf_detail.configure(text="Card detected in scanning area. Aligning...", fg=C["muted"])
+        self._conf_time.configure(text="")
+        self._conf_method.configure(text="METHOD: ID CARD", fg=C["accent2"])
+        self._conf_att_id.configure(text="")
+        if hasattr(self, "_conf_receipt_btn"):
+            self._conf_receipt_btn.configure(state="disabled")
+        self._conf_note.configure(text="Hold the ID card steady inside view.", fg=C["dimmed"])
+        self._conf_card.configure(highlightbackground=C["accent2"])
+
+    def _show_reading_card_in_progress(self):
+        if hasattr(self, "_conf_idle_frame") and hasattr(self, "_conf_active_frame"):
+            self._conf_idle_frame.pack_forget()
+            self._conf_active_frame.pack(fill="both", expand=True)
+
+        self._conf_status_badge.configure(text="● READING CARD", fg=C["warn"])
+        self._conf_name.configure(text="READING CARD...", fg=C["text_sec"])
+        self._conf_id.configure(text="DECODING ID...", fg=C["warn"])
+        self._conf_detail.configure(text="Decoding barcode / QR code...", fg=C["muted"])
+        self._conf_time.configure(text="")
+        self._conf_method.configure(text="METHOD: ID CARD", fg=C["warn"])
+        self._conf_att_id.configure(text="")
+        if hasattr(self, "_conf_receipt_btn"):
+            self._conf_receipt_btn.configure(state="disabled")
+        self._conf_note.configure(text="Multi-pass decoding in progress...", fg=C["dimmed"])
+        self._conf_card.configure(highlightbackground=C["warn"])
+
+    def _show_reading_card(self, barcode_val: str):
+        if hasattr(self, "_conf_idle_frame") and hasattr(self, "_conf_active_frame"):
+            self._conf_idle_frame.pack_forget()
+            self._conf_active_frame.pack(fill="both", expand=True)
+
+        self._conf_status_badge.configure(text="● READING CARD", fg=C["warn"])
         self._conf_name.configure(text="READING ID CARD...", fg=C["text_sec"])
         self._conf_id.configure(text=f"ID: {barcode_val}", fg=C["accent2"])
         self._conf_detail.configure(text="Decoding student ID from card...", fg=C["muted"])
         self._conf_time.configure(text="")
         self._conf_method.configure(text="METHOD: ID CARD", fg=C["accent2"])
+        self._conf_att_id.configure(text="")
+        if hasattr(self, "_conf_receipt_btn"):
+            self._conf_receipt_btn.configure(state="disabled")
         self._conf_note.configure(text="Reading card data...", fg=C["dimmed"])
         self._conf_card.configure(highlightbackground=C["accent2"])
 
     def _show_identifying_student(self, student_id: str):
-        if self._current_status != "CARD DETECTED":
+        if self._current_status not in ("CARD DETECTED", "READING CARD"):
             return
         self._conf_status_badge.configure(text="● IDENTIFYING STUDENT...", fg=C["warn"])
         self._conf_name.configure(text="IDENTIFYING STUDENT...", fg=C["text_sec"])
@@ -1860,16 +1921,16 @@ class AttendXApp(tk.Tk):
             self._conf_idle_frame.pack_forget()
             self._conf_active_frame.pack(fill="both", expand=True)
 
-        self._conf_status_badge.configure(text="● CARD DETECTED", fg=C["warn"])
+        self._conf_status_badge.configure(text="! UNABLE TO READ CARD", fg=C["warn"])
         self._conf_name.configure(text="UNABLE TO READ CARD", fg=C["warn"])
-        self._conf_id.configure(text="CARD DETECTED", fg=C["warn"])
-        self._conf_detail.configure(text="Please hold the card inside the scanning area.\nEnsure good lighting and avoid glare.", fg=C["muted"])
+        self._conf_id.configure(text="UNREADABLE CODE", fg=C["warn"])
+        self._conf_detail.configure(text="Card was detected but could not be decoded after reasonable attempts.\nPlease ensure good lighting and avoid glare.", fg=C["muted"])
         self._conf_time.configure(text="")
         self._conf_method.configure(text="METHOD: ID CARD", fg=C["dimmed"])
         self._conf_att_id.configure(text="")
         if hasattr(self, "_conf_receipt_btn"):
             self._conf_receipt_btn.configure(state="disabled")
-        self._conf_note.configure(text="Please hold the card inside the scanning area.", fg=C["dimmed"])
+        self._conf_note.configure(text="Please hold the card steady inside the scanning area.", fg=C["dimmed"])
         self._conf_card.configure(highlightbackground=C["warn"])
 
     def _update_conf_card_success(self, student: dict, time_str: str, method: str,
@@ -2071,36 +2132,46 @@ class AttendXApp(tk.Tk):
 
         # Header status badge
         header_badge_map = {
-            "INITIALIZING": ("● INITIALIZING",   C["muted"]),
-            "READY":        ("● SYSTEM ONLINE",  C["accent"]),
-            "CAMERA READY": ("● CAMERA READY",   C["accent"]),
-            "FACE DETECTED":("● FACE DETECTED",  C["accent"]),
-            "CARD DETECTED":("● CARD DETECTED",  C["accent2"]),
-            "IDENTIFYING":  ("● IDENTIFYING...", C["warn"]),
-            "RECORDED":     ("✓ ATTENDANCE RECORDED", C["accent"]),
-            "DUPLICATE":    ("! ALREADY MARKED", C["warn"]),
-            "NOT ENROLLED": ("! NOT ENROLLED",   C["danger"]),
-            "NO SESSION":   ("! NO ACTIVE CLASS", C["warn"]),
-            "UNKNOWN":      ("! STUDENT NOT FOUND", C["danger"]),
-            "CAMERA ERROR": ("! CAMERA OFFLINE", C["danger"]),
-            "DEMO MODE":    ("✦ DEMO MODE ACTIVE", C["accent2"]),
+            "INITIALIZING":        ("● INITIALIZING",   C["muted"]),
+            "READY":               ("● SYSTEM ONLINE",  C["accent"]),
+            "CAMERA READY":        ("● CAMERA READY",   C["accent"]),
+            "CARD DETECTED":       ("● CARD DETECTED",  C["accent2"]),
+            "READING CARD":        ("● READING CARD",   C["warn"]),
+            "UNABLE TO READ CARD": ("! UNABLE TO READ CARD", C["warn"]),
+            "STUDENT NOT FOUND":   ("! STUDENT NOT FOUND", C["danger"]),
+            "NOT ENROLLED":        ("! NOT ENROLLED",   C["danger"]),
+            "ATTENDANCE RECORDED": ("✓ ATTENDANCE RECORDED", C["accent"]),
+            "ALREADY MARKED":      ("! ALREADY MARKED", C["warn"]),
+            "FACE DETECTED":       ("● FACE DETECTED",  C["accent"]),
+            "IDENTIFYING":         ("● IDENTIFYING...", C["warn"]),
+            "RECORDED":            ("✓ ATTENDANCE RECORDED", C["accent"]),
+            "DUPLICATE":           ("! ALREADY MARKED", C["warn"]),
+            "NO SESSION":          ("! NO ACTIVE CLASS", C["warn"]),
+            "UNKNOWN":             ("! STUDENT NOT FOUND", C["danger"]),
+            "CAMERA ERROR":        ("! CAMERA OFFLINE", C["danger"]),
+            "DEMO MODE":           ("✦ DEMO MODE ACTIVE", C["accent2"]),
         }
         badge_txt, badge_col = header_badge_map.get(status, ("● SYSTEM ONLINE", C["accent"]))
         if hasattr(self, "_sys_badge_label"):
             self._sys_badge_label.configure(text=badge_txt, fg=badge_col)
 
         hint_map = {
-            "READY":        "LOOK AT CAMERA OR PRESENT ID CARD",
-            "FACE DETECTED":"FACE DETECTED  ·  IDENTIFYING STUDENT...",
-            "CARD DETECTED":"CARD DETECTED  ·  READING ID...",
-            "IDENTIFYING":  "IDENTIFYING STUDENT...",
-            "RECORDED":     "✓ ATTENDANCE RECORDED",
-            "DUPLICATE":    "! ALREADY MARKED TODAY",
-            "NOT ENROLLED": "! STUDENT NOT ENROLLED IN THIS SUBJECT",
-            "NO SESSION":   "! NO ACTIVE CLASS SESSION",
-            "UNKNOWN":      "! STUDENT NOT FOUND  ·  NOT REGISTERED",
-            "CAMERA ERROR": "! CAMERA OFFLINE",
-            "DEMO MODE":    "✦ DEMO MODE ACTIVE",
+            "READY":               "LOOK AT CAMERA OR PRESENT ID CARD",
+            "CARD DETECTED":       "CARD DETECTED  ·  HOLD CARD STEADY",
+            "READING CARD":        "READING CARD  ·  DECODING ID...",
+            "UNABLE TO READ CARD": "! UNABLE TO READ CARD  ·  CHECK LIGHTING & POSITION",
+            "STUDENT NOT FOUND":   "! STUDENT NOT FOUND  ·  NOT REGISTERED",
+            "NOT ENROLLED":        "! STUDENT NOT ENROLLED IN THIS SUBJECT",
+            "ATTENDANCE RECORDED": "✓ ATTENDANCE RECORDED",
+            "ALREADY MARKED":      "! ATTENDANCE ALREADY RECORDED FOR THIS SESSION",
+            "FACE DETECTED":       "FACE DETECTED  ·  IDENTIFYING STUDENT...",
+            "IDENTIFYING":         "IDENTIFYING STUDENT...",
+            "RECORDED":            "✓ ATTENDANCE RECORDED",
+            "DUPLICATE":           "! ALREADY MARKED TODAY",
+            "NO SESSION":          "! NO ACTIVE CLASS SESSION",
+            "UNKNOWN":             "! STUDENT NOT FOUND  ·  NOT REGISTERED",
+            "CAMERA ERROR":        "! CAMERA OFFLINE",
+            "DEMO MODE":           "✦ DEMO MODE ACTIVE",
         }
         hint = hint_map.get(status, "")
         if hasattr(self, "_hint_label"):
@@ -2935,9 +3006,9 @@ class IdCardDebugDialog(_BaseDialog):
         self._labels = {}
         rows = [
             ("Camera:", "ONLINE" if cam_online else "OFFLINE", C["accent"] if cam_online else C["danger"]),
-            ("Barcode Detector:", dbg.get("barcode_detector", "ACTIVE"), C["accent"] if dbg.get("barcode_detector") == "ACTIVE" else C["danger"]),
-            ("QR Detector:", dbg.get("qr_detector", "ACTIVE"), C["accent"]),
-            ("OCR Fallback:", dbg.get("ocr_fallback", "READY"), C["accent"] if dbg.get("ocr_fallback") == "READY" else C["muted"]),
+            ("Barcode Detector:", dbg.get("barcode_detector", "ACTIVE"), C["accent"] if "ACTIVE" in dbg.get("barcode_detector", "") else C["danger"]),
+            ("QR Detector:", dbg.get("qr_detector", "ACTIVE"), C["accent"] if "ACTIVE" in dbg.get("qr_detector", "") else C["danger"]),
+            ("OCR Fallback:", dbg.get("ocr_fallback", "READY"), C["accent"] if dbg.get("ocr_fallback", "").startswith("READY") else C["muted"]),
         ]
         for label, val, col in rows:
             r = tk.Frame(info_frame, bg=C["surface"])
@@ -3019,6 +3090,24 @@ class IdCardDebugDialog(_BaseDialog):
             self._labels["Camera:"].configure(
                 text="ONLINE" if cam_online else "OFFLINE",
                 fg=C["accent"] if cam_online else C["danger"]
+            )
+        if "Barcode Detector:" in self._labels:
+            bd_text = dbg.get("barcode_detector", "ACTIVE")
+            self._labels["Barcode Detector:"].configure(
+                text=bd_text,
+                fg=C["accent"] if "ACTIVE" in bd_text else C["danger"]
+            )
+        if "QR Detector:" in self._labels:
+            qr_text = dbg.get("qr_detector", "ACTIVE")
+            self._labels["QR Detector:"].configure(
+                text=qr_text,
+                fg=C["accent"] if "ACTIVE" in qr_text else C["danger"]
+            )
+        if "OCR Fallback:" in self._labels:
+            ocr_text = dbg.get("ocr_fallback", "READY")
+            self._labels["OCR Fallback:"].configure(
+                text=ocr_text,
+                fg=C["accent"] if ocr_text.startswith("READY") else C["muted"]
             )
         for k in ("Last Scan:", "Decode:", "Method:", "Reason:"):
             field_key = k.rstrip(":").lower().replace(" ", "_")

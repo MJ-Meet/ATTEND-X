@@ -9,15 +9,20 @@ qrcode[pil]>=7.4.2
 # https://github.com/NaturalHistoryMuseum/pyzbar#installation
 pyzbar>=0.1.9
 
+# OCR Fallback (optional)
+pytesseract>=0.3.10
+
 # Pandas – CSV report generation
 pandas>=2.0.0
 
 # Face recognition (optional – enables automatic face identification)
-# On Windows, install precompiled wheels with:
+# On Windows, pip cannot compile 'dlib' from source without Visual Studio C++.
+# Install precompiled wheels instead:
 #   pip install dlib-bin
-#   pip install face_recognition_models "setuptools<72"
+#   pip install face-recognition-models "setuptools<72"
 #   pip install face_recognition --no-deps
-# See README.md for full details.
-face_recognition>=1.3.0
+# (Uncomment below only on Linux or if Visual Studio C++ is installed)
+# face_recognition>=1.3.0
 dlib-bin>=20.0.0
 face-recognition-models>=0.3.0
+setuptools<72

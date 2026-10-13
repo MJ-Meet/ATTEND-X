@@ -24,6 +24,8 @@ class DetectionEvent:
     """Carries detection results from the camera thread to the GUI thread."""
     FACE            = "FACE"
     BARCODE         = "BARCODE"
+    CARD_DETECTED   = "CARD_DETECTED"
+    READING_CARD    = "READING_CARD"
     CARD_UNREADABLE = "CARD_UNREADABLE"
     NONE            = "NONE"
 
@@ -191,9 +193,25 @@ class CameraManager:
 
                 if scan_res["card_detected"]:
                     self._card_unreadable_counter += 1
-                    # If card held steady for ~4 frames without QR decode:
-                    if self._card_unreadable_counter >= 4:
-                        # Stage 4: Try OCR fallback
+                    # Immediate feedback: CARD DETECTED -> READING CARD
+                    if self._card_unreadable_counter == 1:
+                        self._emit(DetectionEvent(
+                            DetectionEvent.CARD_DETECTED,
+                            data=None,
+                            frame=frame.copy(),
+                            metadata=scan_res
+                        ))
+                    elif self._card_unreadable_counter == 3:
+                        self._emit(DetectionEvent(
+                            DetectionEvent.READING_CARD,
+                            data=None,
+                            frame=frame.copy(),
+                            metadata=scan_res
+                        ))
+
+                    # If card held steady across reasonable attempts (~12 frames / ~0.4s):
+                    if self._card_unreadable_counter >= 12:
+                        # Try OCR fallback if supported
                         ocr_res = barcode_scanner.scan_frame(frame, allow_ocr=True)
                         if ocr_res["found"]:
                             self._card_unreadable_counter = 0
@@ -206,7 +224,7 @@ class CameraManager:
                             self._last_detection_time = now + self.COOLDOWN_SECONDS
                             continue
                         else:
-                            # Card visible in scanning area but could not be decoded
+                            # Card visible in scanning area but code cannot be decoded after reasonable attempts
                             self._card_unreadable_counter = 0
                             self._emit(DetectionEvent(
                                 DetectionEvent.CARD_UNREADABLE,
@@ -217,7 +235,9 @@ class CameraManager:
                             self._last_detection_time = now + 2.5
                             continue
                 else:
-                    self._card_unreadable_counter = 0
+                    if self._card_unreadable_counter > 0:
+                        self._card_unreadable_counter = 0
+                        self._emit(DetectionEvent(DetectionEvent.NONE))
 
                 # ── Face detection (every N frames – heavier) ──
                 if self._frame_counter % self.FACE_DETECT_INTERVAL == 0:

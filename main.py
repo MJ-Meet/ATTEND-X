@@ -41,6 +41,7 @@ def check_dependencies():
     }
     optional_packages = {
         "pyzbar":            "pyzbar",
+        "pytesseract":       "pytesseract",
         "face_recognition":  "face_recognition",
     }
 
@@ -94,6 +95,12 @@ def main():
                     "pyzbar not installed — QR/barcode scanning disabled.\n"
                     "Install with:  pip install pyzbar\n"
                     "Windows may also need:  https://github.com/NaturalHistoryMuseum/pyzbar#installation"
+                )
+            elif mod == "pytesseract":
+                logger.warning(
+                    "pytesseract not installed — OCR fallback disabled.\n"
+                    "Install with:  pip install pytesseract\n"
+                    "Windows also requires Tesseract-OCR binary installed."
                 )
             elif mod == "face_recognition":
                 logger.warning(
